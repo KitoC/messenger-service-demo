@@ -2,6 +2,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+}
+.chat-box {
+  background: white;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 1rem;
+}
+
+#textarea {
+  max-height: 100px;
+  width: 100%;
+  border: none;
+  border-top: 1px solid lightgrey;
+  border-bottom: 1px solid lightgrey;
+  padding: 1rem;
+}
+
+.send-button-box {
+  padding: 1rem;
+}
+
+.fit-parent {
+  height: 100%;
+  width: 100%;
+}
+
+.flex-auto {
+  -webkit-box-flex: 1;
+  -ms-flex: 1 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
 }
 
 .message {

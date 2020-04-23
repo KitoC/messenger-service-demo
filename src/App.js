@@ -5,6 +5,7 @@ import { Card, Form, Loader, Message } from "semantic-ui-react";
 import "semantic-ui-css/semantic.min.css";
 import axios from "axios";
 import arraySort from "array-sort";
+import autosize from "autosize";
 
 console.log(process.env);
 const polybiusURL = process.env.REACT_APP_POLYBIUS_URL;
@@ -17,6 +18,7 @@ const api = axios.create({ baseURL });
 
 function App() {
   const ref = useRef(null);
+  const textAreaRef = useRef(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -78,6 +80,12 @@ function App() {
     }
   }, [currentUser]);
 
+  const textarea = document.querySelector("textarea");
+
+  useEffect(() => {
+    autosize(document.querySelector("textarea"));
+  }, [textarea]);
+
   const sendMessage = async () => {
     const newMessage = {
       body: inputValue,
@@ -123,7 +131,7 @@ function App() {
 
       {!currentUser && !error && (
         <Card>
-          <Card.Content>Please enter your name to start.</Card.Content>
+          <Card.Content header>Please enter your name to start.</Card.Content>
           <Card.Content>
             <Form
               onSubmit={() => {
@@ -162,58 +170,53 @@ function App() {
       )}
 
       {currentUser && currentChat && !isLoading && !error && (
-        <Card>
-          <Card.Content>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "65vh",
-                overflow: "auto",
-              }}
-              ref={ref}
-            >
-              {sortedMessages.map((message) => {
-                const isAuthor = message.authorId === currentUser.id;
+        <div className="chat-box flex-column fit-parent">
+          <div className="flex-auto messages" ref={ref}>
+            {sortedMessages.map((message) => {
+              const isAuthor = message.authorId === currentUser.id;
 
-                const boxStyles = { paddingBottom: "20px" };
+              const boxStyles = { paddingBottom: "20px" };
 
-                if (isAuthor) {
-                  boxStyles.paddingLeft = "40px";
-                } else {
-                  boxStyles.paddingRight = "40px";
-                }
-                return (
-                  <div style={boxStyles}>
-                    <Message
-                      className="message"
-                      color={isAuthor ? "blue" : "green"}
-                      content={message.metadata.name}
-                      header={message.body}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </Card.Content>
-          <Card.Content>
-            <Form.Input
+              if (isAuthor) {
+                boxStyles.paddingLeft = "40px";
+              } else {
+                boxStyles.paddingRight = "40px";
+              }
+              return (
+                <div style={boxStyles}>
+                  <Message
+                    className="message"
+                    color={isAuthor ? "blue" : "green"}
+                    content={message.metadata.name}
+                    header={message.body}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div>
+            <textarea
+              id="textarea"
               fluid
               name="currentChatUser"
               value={inputValue}
+              rows={1}
+              placeholder="Send a message ..."
               onChange={(e) => setInputValue(e.target.value)}
             />
-          </Card.Content>
-          <Card.Content>
+          </div>
+          <div className="send-button-box">
             <Form.Button
+              primary
               disabled={isSending || !inputValue}
               fluid
               onClick={sendMessage}
             >
               Send Message
             </Form.Button>
-          </Card.Content>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );
