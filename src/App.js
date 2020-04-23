@@ -149,7 +149,7 @@ function App() {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                height: "70vh",
+                height: "65vh",
                 overflow: "auto",
               }}
               ref={ref}
