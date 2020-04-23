@@ -19,6 +19,7 @@ function App() {
   const ref = useRef(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [currentUser, setCurrentUser] = useState(
     localStorage.getItem("currentChatUser")
@@ -28,6 +29,13 @@ function App() {
   const [currentChat, setCurrentChat] = useState(null);
   const [inputValue, setInputValue] = useState("");
 
+  const handleError = (error) => {
+    setError(error.message);
+    setIsLoading(false);
+    localStorage.removeItem("currentChatUser");
+    setCurrentUser(null);
+  };
+
   useEffect(() => {
     if (currentUser && !currentUser.fromLocal) {
       api
@@ -36,15 +44,15 @@ function App() {
           setIsLoading(false);
           setCurrentChat(data.data);
         })
-        .catch(console.log);
-    } else {
+        .catch(handleError);
+    } else if (currentUser) {
       api
         .get(`/chats/${chatId}`)
         .then(({ data }) => {
           setIsLoading(false);
           setCurrentChat(data.data);
         })
-        .catch(console.log);
+        .catch(handleError);
     }
   }, [currentUser]);
 
@@ -92,7 +100,7 @@ function App() {
         setCurrentChat(data.data);
         ref.current.scrollTop = ref.current.scrollHeight;
       })
-      .catch(console.log);
+      .catch(handleError);
   };
 
   const sortedMessages = arraySort(
@@ -100,9 +108,20 @@ function App() {
     "createdAt"
   );
 
+  console.log({ currentUser, isLoading, error });
+
   return (
     <div className="App">
-      {!currentUser && (
+      {!currentUser && !isLoading && error && (
+        <Message
+          error
+          className="message"
+          content={error}
+          header="something went wrong!"
+        />
+      )}
+
+      {!currentUser && !error && (
         <Card>
           <Card.Content>Please enter your name to start.</Card.Content>
           <Card.Content>
@@ -142,7 +161,7 @@ function App() {
         </div>
       )}
 
-      {currentUser && currentChat && !isLoading && (
+      {currentUser && currentChat && !isLoading && !error && (
         <Card>
           <Card.Content>
             <div
