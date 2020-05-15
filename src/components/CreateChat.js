@@ -31,10 +31,9 @@ const CreateChat = ({ dispatch, currentUser }) => {
           const newChat = {
             type: "issue",
             authorName: currentUser.name,
-            assignnee: "operator:bridj",
+            assignee: "operator:bridj",
             status: "issue_created",
             messages: [],
-            // title: "Issue ",
             metadata: {},
             channels: [selectedRegion, selectedZone],
             participants: [{ participantId: "operator:bridj" }],
