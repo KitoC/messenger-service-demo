@@ -1,62 +1,88 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useReducer } from "react";
 import "./App.css";
 import io from "socket.io-client";
-import { Card, Form, Loader, Message } from "semantic-ui-react";
+import { Message } from "semantic-ui-react";
 import "semantic-ui-css/semantic.min.css";
-import axios from "axios";
-import arraySort from "array-sort";
-import autosize from "autosize";
+import { api } from "./api";
+import Chat from "./components/Chat";
+import CreateUser from "./components/CreateUser";
 
-console.log(process.env);
-const polybiusURL = process.env.REACT_APP_POLYBIUS_URL;
-const chatId = process.env.REACT_APP_CHAT_ID;
+function reducer(state, action) {
+  switch (action.type) {
+    case "SET_USER":
+      return { ...state, currentUser: action.payload };
 
-const socketUrl = `${polybiusURL}/Bridj`;
-const baseURL = `${polybiusURL}/v1/Bridj`;
+    case "SET_CHAT":
+      localStorage.setItem("currentChat", JSON.stringify(action.payload));
+      console.log("SET_CHAT", action.payload);
+      return { ...state, currentChat: action.payload };
 
-const api = axios.create({ baseURL });
+    case "UPDATE_MESSAGES":
+      return { ...state, messages: action.payload };
+
+    case "SET_ERROR":
+      if (action.payload.response.data.errors[0] === "Not found.") {
+        localStorage.removeItem("currentChat");
+      }
+
+      return {
+        ...state,
+        isLoading: false,
+        currentUser: null,
+        error: action.payload && action.payload.message,
+      };
+
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+
+    default:
+      return state;
+  }
+}
 
 function App() {
-  const ref = useRef(null);
-  const textAreaRef = useRef(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [currentUser, setCurrentUser] = useState(
-    localStorage.getItem("currentChatUser")
+  const initialState = {
+    currentUser: localStorage.getItem("currentChatUser")
       ? JSON.parse(localStorage.getItem("currentChatUser"))
-      : null
-  );
-  const [currentChat, setCurrentChat] = useState(null);
-  const [inputValue, setInputValue] = useState("");
-
-  const handleError = (error) => {
-    setError(error.message);
-    setIsLoading(false);
-    localStorage.removeItem("currentChatUser");
-    setCurrentUser(null);
+      : null,
+    error: false,
+    isLoading: false,
+    currentChat: localStorage.getItem("currentChat")
+      ? JSON.parse(localStorage.getItem("currentChat"))
+      : null,
+    messages: [],
   };
 
-  useEffect(() => {
-    if (currentUser && !currentUser.fromLocal) {
-      api
-        .patch(`/chats/${chatId}/join`, currentUser)
-        .then(({ data }) => {
-          setIsLoading(false);
-          setCurrentChat(data.data);
-        })
-        .catch(handleError);
-    } else if (currentUser) {
-      api
-        .get(`/chats/${chatId}`)
-        .then(({ data }) => {
-          setIsLoading(false);
-          setCurrentChat(data.data);
-        })
-        .catch(handleError);
-    }
-  }, [currentUser]);
+  const ref = useRef(null);
+
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { isLoading, error, currentUser, currentChat, messages } = state;
+
+  console.log({ state });
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState(false);
+  // const [currentUser, setCurrentUser] = useState();
+  // const [currentChat, setCurrentChat] = useState(null);
+
+  // useEffect(() => {
+  //   if (currentUser && !currentUser.fromLocal) {
+  //     api
+  //       .patch(`/chats/${chatId}/join`, currentUser)
+  //       .then(({ data }) => {
+  //         setIsLoading(false);
+  //         setCurrentChat(data.data);
+  //       })
+  //       .catch(handleError);
+  //   } else if (currentUser) {
+  //     api
+  //       .get(`/chats/${chatId}`)
+  //       .then(({ data }) => {
+  //         setIsLoading(false);
+  //         setCurrentChat(data.data);
+  //       })
+  //       .catch(handleError);
+  //   }
+  // }, [currentUser]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -66,157 +92,34 @@ function App() {
     }, 0);
   }, [isLoading, ref]);
 
-  useEffect(() => {
-    if (currentUser) {
-      const socket = io(socketUrl);
-
-      socket.emit("join-chats", [currentUser.id]);
-
-      socket.on("update-chat", (data) => {
-        console.log("update-chat");
-        setCurrentChat(data);
-        ref.current.scrollTop = ref.current.scrollHeight;
-      });
-    }
-  }, [currentUser]);
-
-  const textarea = document.querySelector("textarea");
-
-  useEffect(() => {
-    autosize(document.querySelector("textarea"));
-  }, [textarea]);
-
-  const sendMessage = async () => {
-    const newMessage = {
-      body: inputValue,
-      authorId: currentUser.id,
-      metadata: { ...currentUser },
-    };
-    const updatedChat = {
-      ...currentChat,
-      messages: [newMessage],
-    };
-
-    setIsSending(true);
-    setInputValue("");
-
-    api
-      .patch(`/chats/${chatId}`, updatedChat)
-      .then(({ data }) => {
-        console.log("setting false");
-        setIsSending(false);
-        setCurrentChat(data.data);
-        ref.current.scrollTop = ref.current.scrollHeight;
-      })
-      .catch(handleError);
-  };
-
-  const sortedMessages = arraySort(
-    currentChat ? currentChat.messages : [],
-    "createdAt"
-  );
-
-  console.log({ currentUser, isLoading, error });
-
   return (
     <div className="App">
       {!currentUser && !isLoading && error && (
-        <Message
-          error
-          className="message"
-          content={error}
-          header="something went wrong!"
+        <>
+          <Message
+            error
+            className="message"
+            content={error}
+            header="something went wrong!"
+          />
+          <button
+            onClick={() => dispatch({ type: "SET_ERROR", payload: null })}
+          >
+            Try again
+          </button>
+        </>
+      )}
+
+      {!currentUser && !error && <CreateUser dispatch={dispatch} />}
+
+      {currentUser && !isLoading && !error && (
+        <Chat
+          isLoading={isLoading}
+          currentUser={currentUser}
+          currentChat={currentChat}
+          messages={messages}
+          dispatch={dispatch}
         />
-      )}
-
-      {!currentUser && !error && (
-        <Card>
-          <Card.Content header>Please enter your name to start.</Card.Content>
-          <Card.Content>
-            <Form
-              onSubmit={() => {
-                const userId = `${Math.random()}`;
-
-                setInputValue("");
-                setCurrentUser({ name: inputValue, id: userId });
-
-                localStorage.setItem(
-                  "currentChatUser",
-                  JSON.stringify({
-                    name: inputValue,
-                    id: userId,
-                    fromLocal: true,
-                  })
-                );
-              }}
-            >
-              <Form.Input
-                name="currentChatUser"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                fluid
-              />
-              <Form.Button fluid>Submit name</Form.Button>
-            </Form>
-          </Card.Content>
-        </Card>
-      )}
-
-      {currentUser && isLoading && (
-        <div>
-          <Loader active={isLoading} inline inverted />
-          <p>Joining chat ...</p>
-        </div>
-      )}
-
-      {currentUser && currentChat && !isLoading && !error && (
-        <div className="chat-box flex-column fit-parent">
-          <div className="flex-auto messages" ref={ref}>
-            {sortedMessages.map((message) => {
-              const isAuthor = message.authorId === currentUser.id;
-
-              const boxStyles = { paddingBottom: "20px" };
-
-              if (isAuthor) {
-                boxStyles.paddingLeft = "40px";
-              } else {
-                boxStyles.paddingRight = "40px";
-              }
-              return (
-                <div style={boxStyles}>
-                  <Message
-                    className="message"
-                    color={isAuthor ? "blue" : "green"}
-                    content={message.metadata.name}
-                    header={message.body}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <div>
-            <textarea
-              id="textarea"
-              fluid
-              name="currentChatUser"
-              value={inputValue}
-              rows={1}
-              placeholder="Send a message ..."
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-          </div>
-          <div className="send-button-box">
-            <Form.Button
-              primary
-              disabled={isSending || !inputValue}
-              fluid
-              onClick={sendMessage}
-            >
-              Send Message
-            </Form.Button>
-          </div>
-        </div>
       )}
     </div>
   );

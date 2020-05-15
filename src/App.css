@@ -3,6 +3,11 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+.App div {
+  max-width: 500px;
 }
 .chat-box {
   background: white;
@@ -82,4 +87,10 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.accept-reject-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
 }
